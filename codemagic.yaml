@@ -32,7 +32,16 @@ workflows:
           rm -rf Payload WebDriverAgent.ipa
           mkdir Payload
           cp -R "$APP" Payload/
+          # iOS 17+: runner-ul NU trebuie sa-si care framework-urile XCTest ale platformei
+          # (le ofera telefonul din Developer Disk Image). Daca raman, eSign le semneaza cu
+          # entitlements si AMFI pe iOS 27 respinge: "has entitlements but is not a main binary"
+          # -> runner-ul porneste, e autorizat, apoi iese in ~1s si serverul WDA nu urca.
+          FW="Payload/WebDriverAgentRunner-Runner.app/Frameworks"
+          rm -rf "$FW/XCTest.framework" "$FW/XCTestCore.framework" "$FW/XCTestSupport.framework" \
+                 "$FW/XCTAutomationSupport.framework" "$FW/XCUIAutomation.framework" \
+                 "$FW/XCUnit.framework" "$FW/Testing.framework" "$FW/libXCTestSwiftSupport.dylib"
+          echo "Framework-uri XCTest scoase (le da telefonul pe iOS 17+)."
           zip -r ../WebDriverAgent.ipa Payload >/dev/null
-          echo "Gata: WebDriverAgent.ipa"
+          echo "Gata: WebDriverAgent.ipa (slim)"
     artifacts:
       - WebDriverAgent.ipa
