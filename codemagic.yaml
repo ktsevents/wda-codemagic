@@ -1,0 +1,38 @@
+# Build WebDriverAgent ca IPA NESEMNAT pe Codemagic (mașină macOS în cloud, fără Mac fizic).
+# Descarci IPA-ul din artefacte și îl semnezi + instalezi cu eSign pe iPhone.
+# Pune acest fișier în rădăcina unui repo gol și pornește workflow-ul "build-wda" în Codemagic.
+workflows:
+  build-wda:
+    name: WebDriverAgent IPA (nesemnat, pentru eSign)
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+    scripts:
+      - name: Ia sursa WebDriverAgent (Appium)
+        script: |
+          set -e
+          git clone --depth 1 https://github.com/appium/WebDriverAgent.git wda
+      - name: Compilează WebDriverAgentRunner fără semnare
+        script: |
+          set -e
+          cd wda
+          xcodebuild build-for-testing \
+            -project WebDriverAgent.xcodeproj \
+            -scheme WebDriverAgentRunner \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath ./build \
+            CODE_SIGNING_ALLOWED=NO AD_HOC_CODE_SIGNING_ALLOWED=YES
+      - name: Împachetează .app în IPA
+        script: |
+          set -e
+          cd wda
+          APP=$(find build/Build/Products -name "WebDriverAgentRunner-Runner.app" -type d | head -n1)
+          echo "App: $APP"
+          rm -rf Payload WebDriverAgent.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -r ../WebDriverAgent.ipa Payload >/dev/null
+          echo "Gata: WebDriverAgent.ipa"
+    artifacts:
+      - WebDriverAgent.ipa
